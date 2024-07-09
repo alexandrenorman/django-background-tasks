@@ -52,6 +52,7 @@ class TaskManager(models.Manager):
         qs = self.unlocked(now)
         if queue:
             qs = qs.filter(queue=queue)
+            
         ready = qs.filter(run_at__lte=now, failed_at=None)
         _priority_ordering = '{}priority'.format(app_settings.BACKGROUND_TASK_PRIORITY_ORDERING)
         ready = ready.order_by(_priority_ordering, 'run_at')
@@ -67,21 +68,21 @@ class TaskManager(models.Manager):
                 ready = self.none()
         return ready
 
-    def unlocked(self, now, queue):
+    def unlocked(self, now, queue=None):
         max_run_time = app_settings.BACKGROUND_TASK_MAX_RUN_TIME
         qs = self.get_queryset(queue)
         expires_at = now - timedelta(seconds=max_run_time)
         unlocked = Q(locked_by=None) | Q(locked_at__lt=expires_at)
         return qs.filter(unlocked)
 
-    def locked(self, now, queue):
+    def locked(self, now, queue=None,):
         max_run_time = app_settings.BACKGROUND_TASK_MAX_RUN_TIME
         qs = self.get_queryset(queue)
         expires_at = now - timedelta(seconds=max_run_time)
         locked = Q(locked_by__isnull=False) | Q(locked_at__gt=expires_at)
         return qs.filter(locked)
 
-    def failed(self, queue):
+    def failed(self, queue=None):
         """
         `currently_locked - currently_failed` in `find_available` assues that
         tasks marked as failed are also in processing by the running PID.
